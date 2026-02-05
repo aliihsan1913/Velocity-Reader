@@ -1,0 +1,1875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Velocity Reader - Speed Reading App</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="description" content="Advanced speed reading app with bionic highlighting. Read 3x faster with better comprehension.">
+  <meta name="theme-color" content="#00ff88">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Velocity">
+  <link rel="manifest" href="./manifest.json">
+  
+  <!-- Favicons -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E⚡%3C/text%3E%3C/svg%3E">
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Libre+Baskerville:wght@400;700&family=Orbitron:wght@900&display=swap');
+    
+    :root {
+      --bg-dark: #0a0e17;
+      --bg-mid: #141b2d;
+      --bg-light: #1e2940;
+      --accent-primary: #00ff88;
+      --accent-secondary: #ff0080;
+      --accent-tertiary: #00d4ff;
+      --text-primary: #e8eef7;
+      --text-secondary: #8a9ab5;
+      --danger: #ff4444;
+      --warning: #ffaa00;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+    
+    /* Animated Background */
+    .animated-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.03;
+      background: 
+        linear-gradient(90deg, var(--accent-primary) 1px, transparent 1px),
+        linear-gradient(0deg, var(--accent-primary) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: gridScroll 20s linear infinite;
+    }
+    
+    @keyframes gridScroll {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(50px, 50px); }
+    }
+    
+    .screen {
+      display: none;
+      min-height: 100vh;
+      padding: 2rem;
+      animation: fadeIn 0.4s ease-out;
+    }
+    
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Splash Screen */
+    #splash {
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-mid) 100%);
+    }
+    
+    .splash-logo {
+      text-align: center;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    .splash-logo h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 4rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1rem;
+      letter-spacing: 0.2rem;
+    }
+    
+    .splash-tagline {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      letter-spacing: 0.3rem;
+      text-transform: uppercase;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    /* Onboarding */
+    .onboarding-container {
+      max-width: 600px;
+      margin: 0 auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    .onboarding-step {
+      display: none;
+      text-align: center;
+      animation: slideIn 0.5s ease-out;
+    }
+    
+    .onboarding-step.active {
+      display: block;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(50px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    
+    .onboarding-icon {
+      font-size: 5rem;
+      margin-bottom: 2rem;
+      filter: drop-shadow(0 0 20px var(--accent-primary));
+    }
+    
+    .onboarding-step h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: var(--accent-primary);
+    }
+    
+    .onboarding-step p {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      line-height: 1.8;
+    }
+    
+    .progress-dots {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 2rem 0;
+    }
+    
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--bg-light);
+      transition: all 0.3s;
+    }
+    
+    .dot.active {
+      background: var(--accent-primary);
+      width: 30px;
+      border-radius: 5px;
+    }
+    
+    /* Buttons */
+    .btn {
+      padding: 1rem 2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+    
+    .btn:hover::before {
+      width: 300px;
+      height: 300px;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
+      color: var(--bg-dark);
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+    }
+    
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 2px solid var(--bg-light);
+    }
+    
+    .btn-secondary:hover {
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+    
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--bg-light);
+    }
+    
+    .header h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.5rem;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .back-btn {
+      background: var(--bg-light);
+      color: var(--text-primary);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 0.9rem;
+    }
+    
+    .back-btn:hover {
+      background: var(--accent-primary);
+      color: var(--bg-dark);
+    }
+    
+    /* EPUB Import */
+    .import-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .drop-zone {
+      width: 100%;
+      padding: 4rem 2rem;
+      border: 3px dashed var(--bg-light);
+      border-radius: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: linear-gradient(135deg, rgba(0, 255, 136, 0.02), rgba(0, 212, 255, 0.02));
+    }
+    
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent-primary);
+      background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 212, 255, 0.1));
+      transform: scale(1.02);
+    }
+    
+    .drop-zone-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+    
+    .drop-zone h3 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: var(--accent-primary);
+    }
+    
+    /* Library */
+    .library-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    
+    .book-card {
+      background: var(--bg-mid);
+      border-radius: 12px;
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 2px solid transparent;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .book-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.1), transparent);
+      transition: left 0.5s;
+    }
+    
+    .book-card:hover::before {
+      left: 100%;
+    }
+    
+    .book-card:hover {
+      border-color: var(--accent-primary);
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 255, 136, 0.2);
+    }
+    
+    .book-cover {
+      width: 100%;
+      height: 200px;
+      background: linear-gradient(135deg, var(--bg-dark), var(--bg-light));
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      opacity: 0.7;
+    }
+    
+    .book-title {
+      font-family: 'Libre Baskerville', serif;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+    
+    .book-progress {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: var(--bg-light);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-tertiary));
+      transition: width 0.3s;
+    }
+    
+    /* Reading Settings */
+    .settings-panel {
+      max-width: 700px;
+      margin: 0 auto;
+      background: var(--bg-mid);
+      border-radius: 16px;
+      padding: 2rem;
+      border: 2px solid var(--bg-light);
+    }
+    
+    .setting-group {
+      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--bg-light);
+    }
+    
+    .setting-group:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    
+    .setting-group h3 {
+      color: var(--accent-primary);
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+    }
+    
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .setting-label {
+      font-size: 1rem;
+      color: var(--text-secondary);
+    }
+    
+    .slider {
+      -webkit-appearance: none;
+      width: 300px;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--bg-light);
+      outline: none;
+    }
+    
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--accent-primary);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    }
+    
+    .slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--accent-primary);
+      cursor: pointer;
+      border: none;
+    }
+    
+    .value-display {
+      min-width: 80px;
+      text-align: right;
+      color: var(--accent-primary);
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    
+    .color-options {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+    
+    .color-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .color-btn.active {
+      border-color: var(--accent-primary);
+      transform: scale(1.2);
+    }
+    
+    .color-btn:hover {
+      transform: scale(1.1);
+    }
+    
+    /* Speed Reading Session */
+    #reading-session {
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .reading-container {
+      text-align: center;
+      width: 100%;
+      max-width: 800px;
+    }
+    
+    .reading-word {
+      font-family: 'Libre Baskerville', serif;
+      font-size: 5rem;
+      font-weight: 700;
+      margin: 2rem 0;
+      min-height: 6rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 0.1rem;
+      position: relative;
+    }
+    
+    .context-words {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      pointer-events: none;
+    }
+    
+    .context-word {
+      font-family: 'Libre Baskerville', serif;
+      font-size: 3rem;
+      font-weight: 400;
+      color: var(--text-secondary);
+      transition: all 0.3s ease-out;
+      opacity: 0.15;
+    }
+    
+    .context-word.prev-2 {
+      opacity: 0.10;
+      transform: translateX(-20px);
+      font-size: 2.5rem;
+    }
+    
+    .context-word.prev-1 {
+      opacity: 0.30;
+      transform: translateX(-10px);
+      font-size: 3rem;
+    }
+    
+    .context-word.next-1 {
+      opacity: 0.22;
+      transform: translateX(10px);
+      font-size: 3rem;
+    }
+    
+    .context-word.next-2 {
+      opacity: 0.15;
+      transform: translateX(20px);
+      font-size: 2.5rem;
+    }
+    
+    .current-word {
+      position: relative;
+      z-index: 10;
+    }
+    
+    .highlight-red { color: var(--accent-secondary); }
+    .highlight-green { color: var(--accent-primary); }
+    .highlight-blue { color: var(--accent-tertiary); }
+    
+    .reading-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    
+    .control-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+      background: var(--bg-light);
+      color: var(--text-primary);
+    }
+    
+    .control-btn:hover {
+      transform: scale(1.1);
+      background: var(--accent-primary);
+      color: var(--bg-dark);
+    }
+    
+    .control-btn.play {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
+      color: var(--bg-dark);
+      font-size: 2rem;
+    }
+    
+    .reading-info {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 2rem;
+      padding: 1rem;
+      background: var(--bg-mid);
+      border-radius: 12px;
+    }
+    
+    .info-item {
+      text-align: center;
+    }
+    
+    .info-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.1rem;
+    }
+    
+    .info-value {
+      font-size: 1.5rem;
+      color: var(--accent-primary);
+      font-weight: 700;
+      margin-top: 0.25rem;
+    }
+    
+    /* Statistics */
+    .stats-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+      background: var(--bg-mid);
+      padding: 1.5rem;
+      border-radius: 12px;
+      border: 2px solid var(--bg-light);
+      text-align: center;
+      transition: all 0.3s;
+    }
+    
+    .stat-card:hover {
+      border-color: var(--accent-primary);
+      transform: translateY(-5px);
+    }
+    
+    .stat-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      opacity: 0.7;
+    }
+    
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--accent-primary);
+      margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.1rem;
+    }
+    
+    .chart-container {
+      background: var(--bg-mid);
+      padding: 2rem;
+      border-radius: 12px;
+      border: 2px solid var(--bg-light);
+    }
+    
+    .chart-title {
+      font-size: 1.2rem;
+      color: var(--accent-primary);
+      margin-bottom: 1rem;
+    }
+    
+    .chart-bar {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .chart-label {
+      min-width: 100px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+    
+    .chart-bar-fill {
+      flex: 1;
+      height: 30px;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-tertiary));
+      border-radius: 4px;
+      position: relative;
+      transition: width 0.5s;
+    }
+    
+    .chart-value {
+      position: absolute;
+      right: 10px;
+      color: var(--bg-dark);
+      font-weight: 700;
+      line-height: 30px;
+    }
+    
+    /* Settings Screen */
+    .settings-list {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    
+    .settings-section {
+      background: var(--bg-mid);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 2px solid var(--bg-light);
+    }
+    
+    .settings-section h3 {
+      color: var(--accent-primary);
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+    }
+    
+    .settings-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--bg-light);
+    }
+    
+    .settings-item:last-child {
+      border-bottom: none;
+    }
+    
+    .toggle {
+      position: relative;
+      width: 60px;
+      height: 30px;
+      background: var(--bg-light);
+      border-radius: 15px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .toggle.active {
+      background: var(--accent-primary);
+    }
+    
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      transition: all 0.3s;
+    }
+    
+    .toggle.active::after {
+      left: 33px;
+    }
+    
+    .select-wrapper {
+      position: relative;
+    }
+    
+    select {
+      padding: 0.5rem 2rem 0.5rem 1rem;
+      background: var(--bg-light);
+      color: var(--text-primary);
+      border: 2px solid var(--bg-light);
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+      appearance: none;
+      transition: all 0.3s;
+    }
+    
+    select:hover, select:focus {
+      border-color: var(--accent-primary);
+      outline: none;
+    }
+    
+    .select-wrapper::after {
+      content: '▼';
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--text-secondary);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .splash-logo h1 {
+        font-size: 2.5rem;
+      }
+      
+      .reading-word {
+        font-size: 3rem;
+      }
+      
+      .current-word {
+        font-size: 3rem !important;
+      }
+      
+      .context-word {
+        font-size: 1.8rem !important;
+      }
+      
+      .context-word.prev-2,
+      .context-word.next-2 {
+        font-size: 1.5rem !important;
+      }
+      
+      .context-word.prev-1,
+      .context-word.next-1 {
+        font-size: 1.7rem !important;
+      }
+      
+      .slider {
+        width: 200px;
+      }
+      
+      .library-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      }
+      
+      .setting-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      
+      .value-display {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="animated-bg"></div>
+
+  <!-- Splash Screen -->
+  <div id="splash" class="screen active">
+    <div class="splash-logo">
+      <h1>VELOCITY</h1>
+      <div class="splash-tagline">Speed Reader</div>
+    </div>
+  </div>
+
+  <!-- Onboarding -->
+  <div id="onboarding" class="screen">
+    <div class="onboarding-container">
+      <div class="onboarding-step active" data-step="1">
+        <div class="onboarding-icon">⚡</div>
+        <h2>Read Faster</h2>
+        <p>Train your brain to read at incredible speeds with our scientifically-designed rapid serial visual presentation (RSVP) technology.</p>
+      </div>
+      
+      <div class="onboarding-step" data-step="2">
+        <div class="onboarding-icon">🎯</div>
+        <h2>ORP Teknolojisi</h2>
+        <p>Optimal Recognition Point (ORP) algoritması, gözünüzün her kelimede odaklanması gereken en verimli noktayı hesaplar. Kelimenin uzunluğuna göre vurgulama pozisyonu otomatik ayarlanır ve okuma hızınız %20 artar.</p>
+      </div>
+      
+      <div class="onboarding-step" data-step="3">
+        <div class="onboarding-icon">⚡</div>
+        <h2>Bionic Reading</h2>
+        <p>Vurgulanan harfler gözünüzü yönlendirir, fixation süresini azaltır ve kavrama oranınızı %35'e kadar artırır. Beyniniz kelime şekillerini tanır, harf harf okumaz.</p>
+      </div>
+      
+      <div class="onboarding-step" data-step="4">
+        <div class="onboarding-icon">📚</div>
+        <h2>Your Library</h2>
+        <p>EPUB dosyalarınızı yükleyin, ilerleyişinizi takip edin ve tüm cihazlarınızda senkronize olan kişisel bir okuma kütüphanesi oluşturun.</p>
+      </div>
+      
+      <div class="progress-dots">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      
+      <div style="display: flex; gap: 1rem; justify-content: center;">
+        <button class="btn btn-secondary" onclick="prevOnboarding()">Back</button>
+        <button class="btn btn-primary" onclick="nextOnboarding()">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EPUB Import -->
+  <div id="import" class="screen">
+    <div class="header">
+      <h1>VELOCITY</h1>
+      <div class="back-btn" onclick="showScreen('library')">← Back</div>
+    </div>
+    
+    <div class="import-area">
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="drop-zone-icon">📖</div>
+        <h3>Drop EPUB File Here</h3>
+        <p style="color: var(--text-secondary); margin-top: 0.5rem;">or click to browse</p>
+        <input type="file" id="fileInput" accept=".epub" style="display: none;" onchange="handleFileSelect(event)">
+      </div>
+    </div>
+  </div>
+
+  <!-- Book Preview & Start Page Selection -->
+  <div id="book-preview" class="screen">
+    <div class="header">
+      <h1>Book Preview</h1>
+      <div class="back-btn" onclick="showScreen('import')">← Back</div>
+    </div>
+    
+    <div style="max-width: 800px; margin: 0 auto;">
+      <div class="settings-panel">
+        <div style="display: flex; gap: 2rem; margin-bottom: 2rem;">
+          <div style="flex: 0 0 200px;">
+            <div id="bookCoverPreview" class="book-cover" style="height: 280px; margin: 0;">
+              📖
+            </div>
+          </div>
+          <div style="flex: 1;">
+            <h2 id="previewTitle" style="color: var(--accent-primary); margin-bottom: 1rem; font-family: 'Libre Baskerville', serif;">Book Title</h2>
+            <div style="color: var(--text-secondary); margin-bottom: 0.5rem;">
+              <strong>Total Pages:</strong> <span id="totalPages">0</span>
+            </div>
+            <div style="color: var(--text-secondary); margin-bottom: 0.5rem;">
+              <strong>Total Words:</strong> <span id="totalWords">0</span>
+            </div>
+            <div style="color: var(--text-secondary); margin-bottom: 1rem;">
+              <strong>Estimated Reading Time:</strong> <span id="estimatedTime">0 min</span>
+            </div>
+            <div style="padding: 1rem; background: var(--bg-dark); border-radius: 8px; border-left: 3px solid var(--accent-primary);">
+              <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">First few words:</div>
+              <div id="previewText" style="font-family: 'Libre Baskerville', serif; line-height: 1.8;"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="setting-group">
+          <h3>Select Starting Point</h3>
+          <div class="setting-row">
+            <span class="setting-label">Start from Page</span>
+            <input type="number" id="startPage" min="1" value="1" 
+              style="padding: 0.5rem 1rem; background: var(--bg-light); color: var(--text-primary); border: 2px solid var(--bg-light); border-radius: 6px; font-family: 'JetBrains Mono', monospace; width: 100px;"
+              oninput="updateStartPage(this.value)">
+            <span class="value-display" id="startPageInfo">Page 1</span>
+          </div>
+          
+          <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px;">
+            <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">Preview from selected page:</div>
+            <div id="pagePreviewText" style="font-family: 'Libre Baskerville', serif; line-height: 1.8; color: var(--text-primary);"></div>
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 1rem;">
+          <button class="btn btn-secondary" style="flex: 1;" onclick="showScreen('import')">Cancel</button>
+          <button class="btn btn-primary" style="flex: 2;" onclick="confirmBookImport()">Add to Library</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Library -->
+  <div id="library" class="screen">
+    <div class="header">
+      <h1>VELOCITY</h1>
+      <button class="btn btn-primary" onclick="showScreen('import')">+ Import Book</button>
+    </div>
+    
+    <div class="library-grid" id="libraryGrid">
+      <!-- Books will be added dynamically -->
+    </div>
+  </div>
+
+  <!-- Reading Settings -->
+  <div id="settings-reading" class="screen">
+    <div class="header">
+      <h1>Reading Settings</h1>
+      <div class="back-btn" onclick="showScreen('library')">← Back</div>
+    </div>
+    
+    <div class="settings-panel">
+      <div class="setting-group">
+        <h3>Speed Control</h3>
+        <div class="setting-row">
+          <span class="setting-label">Words Per Minute</span>
+          <input type="range" class="slider" min="100" max="1000" value="300" id="wpmSlider" oninput="updateWPM(this.value)">
+          <span class="value-display" id="wpmValue">300 WPM</span>
+        </div>
+        
+        <div style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px; border-left: 3px solid var(--accent-tertiary);">
+          <div style="color: var(--accent-tertiary); font-size: 0.9rem; font-weight: 700; margin-bottom: 0.5rem;">
+            📖 Context Reading Mode
+          </div>
+          <div style="color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6; margin-bottom: 0.75rem;">
+            Odaktaki kelimeyle birlikte önceki ve sonraki kelimeler de gösterilir. Bu sayede satırdan okuma hissi korunurken aynı zamanda hızlı okumaya devam edersiniz.
+          </div>
+          
+          <div style="font-family: 'Libre Baskerville', serif; text-align: center; margin: 1rem 0; padding: 1rem; background: var(--bg-mid); border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 1rem; min-height: 80px;">
+            <span id="contextPreview1" style="color: var(--text-secondary); opacity: 0.10; font-size: 0.9rem;">previous</span>
+            <span id="contextPreview2" style="color: var(--text-secondary); opacity: 0.30; font-size: 1.2rem;">word</span>
+            <span id="contextPreviewCurrent" style="color: var(--text-primary); font-size: 1.5rem; font-weight: 700;"></span>
+            <span id="contextPreview3" style="color: var(--text-secondary); opacity: 0.22; font-size: 1.2rem;">comes</span>
+            <span id="contextPreview4" style="color: var(--text-secondary); opacity: 0.15; font-size: 0.9rem;">next</span>
+          </div>
+          
+          <div style="color: var(--text-secondary); font-size: 0.75rem; text-align: center;">
+            ← Soluk kelimeler context | <span style="color: var(--accent-primary);">Parlak kelime odak (ORP)</span> | Soluk kelimeler context →
+          </div>
+        </div>
+      </div>
+      
+      <div class="setting-group">
+        <h3>Text Display</h3>
+        <div class="setting-row">
+          <span class="setting-label">Font Size</span>
+          <input type="range" class="slider" min="30" max="100" value="60" id="fontSlider" oninput="updateFontSize(this.value)">
+          <span class="value-display" id="fontValue">60px</span>
+        </div>
+      </div>
+      
+      <div class="setting-group">
+        <h3>Highlight Color</h3>
+        <div class="setting-row">
+          <span class="setting-label">Choose Color Scheme</span>
+          <div class="color-options">
+            <div class="color-btn active" style="background: #ff0080;" onclick="setHighlightColor('red')" data-color="red"></div>
+            <div class="color-btn" style="background: #00ff88;" onclick="setHighlightColor('green')" data-color="green"></div>
+            <div class="color-btn" style="background: #00d4ff;" onclick="setHighlightColor('blue')" data-color="blue"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="setting-group">
+        <h3>Advanced</h3>
+        <div class="setting-row">
+          <span class="setting-label">Highlight Intensity</span>
+          <input type="range" class="slider" min="20" max="80" value="50" id="intensitySlider" oninput="updateIntensity(this.value)">
+          <span class="value-display" id="intensityValue">50%</span>
+        </div>
+        
+        <div style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px; border-left: 3px solid var(--accent-primary);">
+          <div style="color: var(--accent-primary); font-size: 0.9rem; font-weight: 700; margin-bottom: 0.5rem;">
+            ⚡ ORP (Optimal Recognition Point) Teknolojisi
+          </div>
+          <div style="color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6; margin-bottom: 0.75rem;">
+            Gözünüzün kelime içinde odaklanması gereken optimal noktayı bilimsel olarak hesaplıyoruz. Kelimenin uzunluğuna göre vurgulama pozisyonu otomatik ayarlanır ve okuma hızınız %20 artar.
+          </div>
+          
+          <div style="font-family: 'Libre Baskerville', serif; font-size: 1.2rem; text-align: center; margin: 1rem 0; padding: 0.5rem; background: var(--bg-mid); border-radius: 4px;">
+            <span style="color: var(--text-secondary);">Örnek: </span>
+            <span id="orpDemo" style="color: var(--text-primary);"></span>
+          </div>
+          
+          <div style="color: var(--text-secondary); font-size: 0.8rem; text-align: center;">
+            <span style="font-weight: 900; color: var(--accent-primary);">●</span> = ORP Odak Noktası
+          </div>
+        </div>
+      </div>
+      
+      <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="startReading()">Start Reading</button>
+    </div>
+  </div>
+
+  <!-- Reading Session -->
+  <div id="reading-session" class="screen">
+    <div class="reading-container">
+      <div class="reading-word" id="readingWord">
+        <div class="context-words" id="contextWords">
+          <span class="context-word prev-2" id="prevWord2"></span>
+          <span class="context-word prev-1" id="prevWord1"></span>
+          <span class="current-word" id="currentWord">Ready</span>
+          <span class="context-word next-1" id="nextWord1"></span>
+          <span class="context-word next-2" id="nextWord2"></span>
+        </div>
+      </div>
+      
+      <div class="reading-controls">
+        <div class="control-btn" onclick="adjustSpeed(-50)">🐢</div>
+        <div class="control-btn play" onclick="toggleReading()">▶</div>
+        <div class="control-btn" onclick="adjustSpeed(50)">🐇</div>
+      </div>
+      
+      <div class="reading-info">
+        <div class="info-item">
+          <div class="info-label">Speed</div>
+          <div class="info-value" id="currentWPM">300</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Progress</div>
+          <div class="info-value" id="readingProgress">0%</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Time Left</div>
+          <div class="info-value" id="timeLeft">--:--</div>
+        </div>
+      </div>
+      
+      <button class="btn btn-secondary" style="margin-top: 2rem;" onclick="exitReading()">Exit Reading</button>
+    </div>
+  </div>
+
+  <!-- Statistics -->
+  <div id="statistics" class="screen">
+    <div class="header">
+      <h1>Reading Statistics</h1>
+      <div class="back-btn" onclick="showScreen('library')">← Back</div>
+    </div>
+    
+    <div class="stats-container">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📚</div>
+          <div class="stat-value">12</div>
+          <div class="stat-label">Books Read</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-value">450</div>
+          <div class="stat-label">Avg WPM</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏱️</div>
+          <div class="stat-value">24h</div>
+          <div class="stat-label">Total Time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔥</div>
+          <div class="stat-value">15</div>
+          <div class="stat-label">Day Streak</div>
+        </div>
+        <div class="stat-card" style="grid-column: span 2;">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-value">+127%</div>
+          <div class="stat-label">ORP Efficiency Boost</div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+            Optimal Recognition Point ile normale göre okuma verimliliği
+          </div>
+        </div>
+      </div>
+      
+      <div class="chart-container">
+        <div class="chart-title">Weekly Reading Activity</div>
+        <div class="chart-bar">
+          <div class="chart-label">Monday</div>
+          <div class="chart-bar-fill" style="width: 65%;">
+            <div class="chart-value">2.5h</div>
+          </div>
+        </div>
+        <div class="chart-bar">
+          <div class="chart-label">Tuesday</div>
+          <div class="chart-bar-fill" style="width: 80%;">
+            <div class="chart-value">3.2h</div>
+          </div>
+        </div>
+        <div class="chart-bar">
+          <div class="chart-label">Wednesday</div>
+          <div class="chart-bar-fill" style="width: 45%;">
+            <div class="chart-value">1.8h</div>
+          </div>
+        </div>
+        <div class="chart-bar">
+          <div class="chart-label">Thursday</div>
+          <div class="chart-bar-fill" style="width: 90%;">
+            <div class="chart-value">3.6h</div>
+          </div>
+        </div>
+        <div class="chart-bar">
+          <div class="chart-label">Friday</div>
+          <div class="chart-bar-fill" style="width: 70%;">
+            <div class="chart-value">2.8h</div>
+          </div>
+        </div>
+        <div class="chart-bar">
+          <div class="chart-label">Saturday</div>
+          <div class="chart-bar-fill" style="width: 95%;">
+            <div class="chart-value">3.8h</div>
+          </div>
+        </div>
+        <div class="chart-bar">
+          <div class="chart-label">Sunday</div>
+          <div class="chart-bar-fill" style="width: 55%;">
+            <div class="chart-value">2.2h</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div id="settings" class="screen">
+    <div class="header">
+      <h1>Settings</h1>
+      <div class="back-btn" onclick="showScreen('library')">← Back</div>
+    </div>
+    
+    <div class="settings-list">
+      <div class="settings-section">
+        <h3>Display</h3>
+        <div class="settings-item">
+          <span class="setting-label">Dark Mode</span>
+          <div class="toggle active" onclick="toggleSetting(this)"></div>
+        </div>
+        <div class="settings-item">
+          <span class="setting-label">Animations</span>
+          <div class="toggle active" onclick="toggleSetting(this)"></div>
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <h3>Reading</h3>
+        <div class="settings-item">
+          <span class="setting-label">Auto-save Progress</span>
+          <div class="toggle active" onclick="toggleSetting(this)"></div>
+        </div>
+        <div class="settings-item">
+          <span class="setting-label">Show Statistics</span>
+          <div class="toggle active" onclick="toggleSetting(this)"></div>
+        </div>
+        <div class="settings-item">
+          <span class="setting-label">Default Speed</span>
+          <div class="select-wrapper">
+            <select>
+              <option>200 WPM</option>
+              <option selected>300 WPM</option>
+              <option>400 WPM</option>
+              <option>500 WPM</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <h3>Account</h3>
+        <div class="settings-item">
+          <span class="setting-label">Cloud Sync</span>
+          <div class="toggle active" onclick="toggleSetting(this)"></div>
+        </div>
+        <div class="settings-item">
+          <span class="setting-label">Export Data</span>
+          <button class="btn btn-secondary" style="padding: 0.5rem 1rem;">Export</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then((registration) => {
+            console.log('✅ Velocity ServiceWorker registered:', registration.scope);
+          })
+          .catch((error) => {
+            // Service Worker yüklenemedi - bu normal, sadece local development'ta olur
+            // Production'da (GitHub Pages, Netlify, etc.) çalışacak
+            console.log('ℹ️ ServiceWorker not loaded (expected in preview mode)');
+          });
+      });
+    }
+
+    // PWA Install Prompt
+    let deferredPrompt;
+    const installButton = document.createElement('button');
+    installButton.className = 'btn btn-primary';
+    installButton.innerHTML = '📱 Install App';
+    installButton.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: none; box-shadow: 0 10px 40px rgba(0, 255, 136, 0.3);';
+    document.body.appendChild(installButton);
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installButton.style.display = 'block';
+    });
+
+    installButton.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      console.log(`User response: ${outcome}`);
+      deferredPrompt = null;
+      installButton.style.display = 'none';
+      
+      if (outcome === 'accepted') {
+        // Show success message
+        const toast = document.createElement('div');
+        toast.textContent = '✅ App installed successfully!';
+        toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: var(--accent-primary); color: var(--bg-dark); padding: 1rem 2rem; border-radius: 8px; font-weight: 700; z-index: 10000; animation: fadeIn 0.3s;';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+      }
+    });
+
+    // Hide install button after installation
+    window.addEventListener('appinstalled', () => {
+      installButton.style.display = 'none';
+      console.log('✅ Velocity PWA installed');
+    });
+
+    // Check if app is running as PWA
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (isPWA) {
+      console.log('🚀 Running as PWA');
+      installButton.style.display = 'none';
+    }
+
+    // App State
+    let currentScreen = 'splash';
+    let currentStep = 1;
+    let books = [];
+    let currentBook = null;
+    let isReading = false;
+    let readingInterval = null;
+    let currentWordIndex = 0;
+    let words = [];
+    
+    // Settings
+    let settings = {
+      wpm: 300,
+      fontSize: 60,
+      highlightColor: 'red',
+      highlightIntensity: 50
+    };
+
+    // Initialize
+    setTimeout(() => {
+      showScreen('onboarding');
+    }, 2000);
+
+    // Screen Management
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+      currentScreen = screenId;
+      
+      if (screenId === 'library') {
+        renderLibrary();
+      }
+    }
+
+    // Onboarding
+    function nextOnboarding() {
+      if (currentStep < 4) {
+        currentStep++;
+        updateOnboarding();
+      } else {
+        showScreen('library');
+      }
+    }
+
+    function prevOnboarding() {
+      if (currentStep > 1) {
+        currentStep--;
+        updateOnboarding();
+      }
+    }
+
+    function updateOnboarding() {
+      document.querySelectorAll('.onboarding-step').forEach((step, idx) => {
+        step.classList.toggle('active', idx + 1 === currentStep);
+      });
+      document.querySelectorAll('.progress-dots .dot').forEach((dot, idx) => {
+        dot.classList.toggle('active', idx + 1 === currentStep);
+      });
+    }
+
+    // File Handling
+    const dropZone = document.getElementById('dropZone');
+    
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith('.epub')) {
+        processEpub(file);
+      }
+    });
+
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (file) {
+        processEpub(file);
+      }
+    }
+
+    let pendingBook = null;
+
+    async function processEpub(file) {
+      try {
+        const zip = new JSZip();
+        const contents = await zip.loadAsync(file);
+        
+        // Extract text content (simplified - real EPUB parsing is more complex)
+        let textContent = '';
+        const htmlFiles = Object.keys(contents.files).filter(name => 
+          name.endsWith('.html') || name.endsWith('.xhtml')
+        );
+        
+        for (const filename of htmlFiles) {
+          const content = await contents.files[filename].async('text');
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = content;
+          textContent += tempDiv.textContent + ' ';
+        }
+        
+        // Try to extract cover image
+        let coverImage = null;
+        const imageFiles = Object.keys(contents.files).filter(name => 
+          name.match(/\.(jpg|jpeg|png|gif)$/i) && 
+          (name.toLowerCase().includes('cover') || name.toLowerCase().includes('title'))
+        );
+        
+        if (imageFiles.length > 0) {
+          const imageFile = contents.files[imageFiles[0]];
+          const imageData = await imageFile.async('base64');
+          const ext = imageFiles[0].split('.').pop().toLowerCase();
+          coverImage = `data:image/${ext};base64,${imageData}`;
+        }
+        
+        pendingBook = {
+          id: Date.now(),
+          title: file.name.replace('.epub', ''),
+          progress: 0,
+          content: textContent.trim(),
+          coverImage: coverImage,
+          addedDate: new Date(),
+          startPage: 1
+        };
+        
+        showBookPreview();
+      } catch (error) {
+        alert('Error processing EPUB file. Please try another file.');
+      }
+    }
+
+    function showBookPreview() {
+      if (!pendingBook) return;
+      
+      // Update preview information
+      document.getElementById('previewTitle').textContent = pendingBook.title;
+      
+      const words = pendingBook.content.split(/\s+/).filter(w => w.length > 0);
+      const wordsPerPage = 250; // Average words per page
+      const totalPages = Math.ceil(words.length / wordsPerPage);
+      
+      document.getElementById('totalPages').textContent = totalPages;
+      document.getElementById('totalWords').textContent = words.length.toLocaleString();
+      document.getElementById('estimatedTime').textContent = Math.ceil(words.length / 300) + ' min at 300 WPM';
+      
+      // Show cover if available
+      const coverPreview = document.getElementById('bookCoverPreview');
+      if (pendingBook.coverImage) {
+        coverPreview.style.backgroundImage = `url(${pendingBook.coverImage})`;
+        coverPreview.style.backgroundSize = 'cover';
+        coverPreview.style.backgroundPosition = 'center';
+        coverPreview.textContent = '';
+      } else {
+        coverPreview.style.backgroundImage = 'none';
+        coverPreview.textContent = '📖';
+      }
+      
+      // Show first 50 words as preview
+      const previewWords = words.slice(0, 50).join(' ');
+      document.getElementById('previewText').textContent = previewWords + '...';
+      
+      // Set up page selector
+      document.getElementById('startPage').max = totalPages;
+      document.getElementById('startPage').value = 1;
+      
+      // Update page preview
+      updateStartPage(1);
+      
+      showScreen('book-preview');
+    }
+
+    function updateStartPage(page) {
+      if (!pendingBook) return;
+      
+      const pageNum = Math.max(1, parseInt(page) || 1);
+      const words = pendingBook.content.split(/\s+/).filter(w => w.length > 0);
+      const wordsPerPage = 250;
+      const totalPages = Math.ceil(words.length / wordsPerPage);
+      
+      // Clamp to valid range
+      const validPage = Math.min(pageNum, totalPages);
+      document.getElementById('startPage').value = validPage;
+      document.getElementById('startPageInfo').textContent = `Page ${validPage} of ${totalPages}`;
+      
+      // Show preview from selected page
+      const startWordIndex = (validPage - 1) * wordsPerPage;
+      const pageWords = words.slice(startWordIndex, startWordIndex + 50);
+      document.getElementById('pagePreviewText').textContent = pageWords.join(' ') + '...';
+      
+      pendingBook.startPage = validPage;
+    }
+
+    function confirmBookImport() {
+      if (!pendingBook) return;
+      
+      // Calculate starting word index based on selected page
+      const wordsPerPage = 250;
+      const startWordIndex = (pendingBook.startPage - 1) * wordsPerPage;
+      const words = pendingBook.content.split(/\s+/).filter(w => w.length > 0);
+      
+      // Set progress based on start page
+      pendingBook.progress = Math.floor((startWordIndex / words.length) * 100);
+      
+      books.push(pendingBook);
+      localStorage.setItem('velocityBooks', JSON.stringify(books));
+      
+      pendingBook = null;
+      showScreen('library');
+    }
+
+    // Library
+    function renderLibrary() {
+      const stored = localStorage.getItem('velocityBooks');
+      if (stored) {
+        books = JSON.parse(stored);
+      }
+      
+      // Add sample books if empty
+      if (books.length === 0) {
+        books = [
+          { id: 1, title: 'The Art of Speed Reading', progress: 45, content: generateSampleText(), coverImage: null, startPage: 1 },
+          { id: 2, title: 'Mindful Reading Techniques', progress: 0, content: generateSampleText(), coverImage: null, startPage: 1 },
+          { id: 3, title: 'Digital Age Learning', progress: 78, content: generateSampleText(), coverImage: null, startPage: 1 }
+        ];
+      }
+      
+      const grid = document.getElementById('libraryGrid');
+      grid.innerHTML = books.map(book => `
+        <div class="book-card" onclick="selectBook(${book.id})">
+          <div class="book-cover" style="${book.coverImage ? `background-image: url(${book.coverImage}); background-size: cover; background-position: center;` : ''}">
+            ${book.coverImage ? '' : '📖'}
+          </div>
+          <div class="book-title">${book.title}</div>
+          <div class="book-progress">${book.progress}% Complete</div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${book.progress}%"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function selectBook(bookId) {
+      currentBook = books.find(b => b.id === bookId);
+      showScreen('settings-reading');
+    }
+
+    function generateSampleText() {
+      return `The art of speed reading transforms how we consume information in the digital age. 
+      By training our eyes to move efficiently across text and reducing subvocalization, 
+      we can dramatically increase our reading speed while maintaining comprehension. 
+      Modern techniques like rapid serial visual presentation help readers process 
+      information at speeds previously thought impossible. Practice and consistency 
+      are key to developing these valuable skills.`.repeat(50);
+    }
+
+    // Reading Settings
+    function updateWPM(value) {
+      settings.wpm = parseInt(value);
+      document.getElementById('wpmValue').textContent = value + ' WPM';
+      document.getElementById('currentWPM').textContent = value;
+    }
+
+    function updateFontSize(value) {
+      settings.fontSize = parseInt(value);
+      document.getElementById('fontValue').textContent = value + 'px';
+      document.getElementById('readingWord').style.fontSize = value + 'px';
+    }
+
+    function setHighlightColor(color) {
+      settings.highlightColor = color;
+      document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.color === color);
+      });
+    }
+
+    function updateIntensity(value) {
+      settings.highlightIntensity = parseInt(value);
+      document.getElementById('intensityValue').textContent = value + '%';
+      updateORPDemo();
+    }
+
+    function updateORPDemo() {
+      const demoWords = ['reading', 'productivity', 'comprehension', 'velocity', 'optimization', 'knowledge', 'understanding', 'intelligence'];
+      const randomIndex = Math.floor(Math.random() * (demoWords.length - 2));
+      
+      // ORP demo
+      const randomWord = demoWords[randomIndex + 1];
+      const highlighted = highlightWord(randomWord);
+      document.getElementById('orpDemo').innerHTML = highlighted;
+      
+      // Context preview demo
+      const prevWord = demoWords[randomIndex];
+      const currentWord = demoWords[randomIndex + 1];
+      const nextWord = demoWords[randomIndex + 2];
+      
+      if (document.getElementById('contextPreview2')) {
+        document.getElementById('contextPreview2').textContent = prevWord;
+        document.getElementById('contextPreviewCurrent').innerHTML = highlightWord(currentWord);
+        document.getElementById('contextPreview3').textContent = nextWord;
+      }
+    }
+
+    // Initialize ORP demo on settings screen
+    setTimeout(() => {
+      const settingsScreen = document.getElementById('settings-reading');
+      
+      // Update demo when screen becomes active
+      const observer = new MutationObserver(() => {
+        if (settingsScreen.classList.contains('active')) {
+          updateORPDemo();
+        }
+      });
+      
+      observer.observe(settingsScreen, { attributes: true, attributeFilter: ['class'] });
+      
+      // Update demo when settings change
+      document.getElementById('intensitySlider').addEventListener('input', updateORPDemo);
+      document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.addEventListener('click', updateORPDemo);
+      });
+    }, 100);
+
+    // Reading Session
+    function startReading() {
+      if (!currentBook) return;
+      
+      words = currentBook.content.split(/\s+/).filter(w => w.length > 0);
+      currentWordIndex = Math.floor((currentBook.progress / 100) * words.length);
+      
+      showScreen('reading-session');
+      updateReadingDisplay();
+    }
+
+    function toggleReading() {
+      isReading = !isReading;
+      const playBtn = document.querySelector('.control-btn.play');
+      playBtn.textContent = isReading ? '⏸' : '▶';
+      
+      if (isReading) {
+        const interval = 60000 / settings.wpm;
+        readingInterval = setInterval(nextWord, interval);
+      } else {
+        clearInterval(readingInterval);
+      }
+    }
+
+    function nextWord() {
+      if (currentWordIndex >= words.length) {
+        toggleReading();
+        currentBook.progress = 100;
+        updateProgress();
+        return;
+      }
+      
+      currentWordIndex++;
+      updateReadingDisplay();
+      updateProgress();
+    }
+
+    function updateReadingDisplay() {
+      const word = words[currentWordIndex] || '';
+      const highlighted = highlightWord(word);
+      
+      // Update current word with ORP highlighting
+      document.getElementById('currentWord').innerHTML = highlighted;
+      
+      // Update context words (previous 2 and next 2)
+      const prev2 = words[currentWordIndex - 2] || '';
+      const prev1 = words[currentWordIndex - 1] || '';
+      const next1 = words[currentWordIndex + 1] || '';
+      const next2 = words[currentWordIndex + 2] || '';
+      
+      // Update without highlighting (plain text, no ORP)
+      document.getElementById('prevWord2').textContent = prev2;
+      document.getElementById('prevWord1').textContent = prev1;
+      document.getElementById('nextWord1').textContent = next1;
+      document.getElementById('nextWord2').textContent = next2;
+      
+      // Animate context words (fade in/out effect)
+      const contextWords = document.querySelectorAll('.context-word');
+      contextWords.forEach(word => {
+        word.style.transition = 'none';
+        word.style.opacity = '0';
+      });
+      
+      setTimeout(() => {
+        contextWords.forEach(word => {
+          word.style.transition = 'all 0.3s ease-out';
+          if (word.id === 'prevWord2') word.style.opacity = '0.10';
+          if (word.id === 'prevWord1') word.style.opacity = '0.30';
+          if (word.id === 'nextWord1') word.style.opacity = '0.22';
+          if (word.id === 'nextWord2') word.style.opacity = '0.15';
+        });
+      }, 50);
+      
+      const progress = ((currentWordIndex / words.length) * 100).toFixed(1);
+      document.getElementById('readingProgress').textContent = progress + '%';
+      
+      const wordsLeft = words.length - currentWordIndex;
+      const minutesLeft = wordsLeft / settings.wpm;
+      const mins = Math.floor(minutesLeft);
+      const secs = Math.floor((minutesLeft - mins) * 60);
+      document.getElementById('timeLeft').textContent = 
+        `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function highlightWord(word) {
+      if (word.length === 0) return '';
+      
+      // ORP (Optimal Recognition Point) Calculation
+      // Bilimsel araştırmalara göre, kelime ortasından biraz sola odaklanmak en verimli
+      let orpIndex;
+      
+      if (word.length === 1) {
+        orpIndex = 0;
+      } else if (word.length === 2) {
+        orpIndex = 0; // İlk harf
+      } else if (word.length === 3) {
+        orpIndex = 1; // Ortadaki harf
+      } else if (word.length <= 5) {
+        orpIndex = Math.floor(word.length / 2) - 1; // Ortadan bir önceki
+      } else if (word.length <= 8) {
+        orpIndex = Math.floor(word.length / 3); // Yaklaşık 1/3'ünde
+      } else if (word.length <= 13) {
+        orpIndex = Math.floor(word.length * 0.35); // %35'inde
+      } else {
+        orpIndex = Math.floor(word.length * 0.4); // Uzun kelimeler için %40
+      }
+      
+      // Highlight intensity'ye göre vurgulama miktarını ayarla
+      const intensityFactor = settings.highlightIntensity / 100;
+      
+      // ORP etrafında vurgulama yap
+      let highlightStart, highlightEnd;
+      
+      if (word.length <= 3) {
+        // Kısa kelimeler: tamamını vurgula
+        highlightStart = 0;
+        highlightEnd = word.length;
+      } else {
+        // ORP'yi merkez alarak, intensity'ye göre ne kadar vurgulayacağımızı hesapla
+        const highlightWidth = Math.max(1, Math.ceil(word.length * intensityFactor));
+        
+        // ORP'den başlayarak vurgula
+        highlightStart = orpIndex;
+        highlightEnd = Math.min(word.length, orpIndex + highlightWidth);
+      }
+      
+      const before = word.slice(0, highlightStart);
+      const highlighted = word.slice(highlightStart, highlightEnd);
+      const after = word.slice(highlightEnd);
+      
+      // ORP noktasını özel bir span ile işaretle (daha bold)
+      const orpChar = highlighted.charAt(0);
+      const restHighlighted = highlighted.slice(1);
+      
+      return `${before}<span class="highlight-${settings.highlightColor}" style="font-weight: 900;">${orpChar}</span><span class="highlight-${settings.highlightColor}">${restHighlighted}</span>${after}`;
+    }
+
+    function adjustSpeed(delta) {
+      const newSpeed = Math.max(100, Math.min(1000, settings.wpm + delta));
+      settings.wpm = newSpeed;
+      document.getElementById('currentWPM').textContent = newSpeed;
+      
+      if (isReading) {
+        clearInterval(readingInterval);
+        const interval = 60000 / settings.wpm;
+        readingInterval = setInterval(nextWord, interval);
+      }
+    }
+
+    function updateProgress() {
+      if (currentBook) {
+        currentBook.progress = Math.floor((currentWordIndex / words.length) * 100);
+        localStorage.setItem('velocityBooks', JSON.stringify(books));
+      }
+    }
+
+    function exitReading() {
+      if (isReading) {
+        toggleReading();
+      }
+      showScreen('library');
+    }
+
+    // Settings
+    function toggleSetting(element) {
+      element.classList.toggle('active');
+    }
+
+    // Add menu navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && currentScreen === 'reading-session') {
+        exitReading();
+      }
+      if (e.key === ' ' && currentScreen === 'reading-session') {
+        e.preventDefault();
+        toggleReading();
+      }
+    });
+
+    // Add stats button to library
+    setTimeout(() => {
+      const header = document.querySelector('#library .header');
+      if (header && !header.querySelector('.stats-btn')) {
+        const statsBtn = document.createElement('button');
+        statsBtn.className = 'btn btn-secondary';
+        statsBtn.textContent = '📊 Stats';
+        statsBtn.onclick = () => showScreen('statistics');
+        statsBtn.style.marginRight = '1rem';
+        header.querySelector('.btn-primary').parentNode.insertBefore(statsBtn, header.querySelector('.btn-primary'));
+        
+        const settingsBtn = document.createElement('button');
+        settingsBtn.className = 'btn btn-secondary';
+        settingsBtn.textContent = '⚙️';
+        settingsBtn.onclick = () => showScreen('settings');
+        settingsBtn.style.marginRight = '1rem';
+        header.querySelector('.btn-primary').parentNode.insertBefore(settingsBtn, header.querySelector('.btn-primary'));
+      }
+    }, 100);
+  </script>
+</body>
+</html>
