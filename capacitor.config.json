@@ -1,0 +1,8 @@
+{
+    "appId": "com.velocity.reader",
+    "appName": "Fast Reader",
+    "webDir": "www",
+    "server": {
+        "androidScheme": "https"
+    }
+}

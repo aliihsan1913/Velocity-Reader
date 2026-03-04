@@ -1,0 +1,53 @@
+{
+    "name": "fast-reader",
+    "version": "1.0.0",
+    "description": "Fast Reader - Advanced Speed Reading App with ORP & Bionic Reading",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron .",
+        "build": "electron-builder --win",
+        "build:portable": "electron-builder --win portable"
+    },
+    "author": "Fast Reader",
+    "license": "MIT",
+    "devDependencies": {
+        "electron": "^28.1.0",
+        "electron-builder": "^24.9.1"
+    },
+    "build": {
+        "appId": "com.velocity.reader",
+        "productName": "Fast Reader",
+        "directories": {
+            "output": "dist"
+        },
+        "files": [
+            "speed-reader.html",
+            "main.js",
+            "manifest.json",
+            "service-worker.js"
+        ],
+        "win": {
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ],
+            "icon": null
+        },
+        "nsis": {
+            "oneClick": true,
+            "allowToChangeInstallationDirectory": false,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "Fast Reader"
+        }
+    },
+    "dependencies": {
+        "@capacitor/android": "^8.1.0",
+        "@capacitor/cli": "^8.1.0",
+        "@capacitor/core": "^8.1.0"
+    }
+}
